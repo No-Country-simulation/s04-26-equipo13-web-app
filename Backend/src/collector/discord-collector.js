@@ -29,19 +29,21 @@ async function collectMessages(token, channelId) {
 
     // 4. Traer los últimos 100 mensajes
     const messages = await channel.messages.fetch({ limit: 100 });
-    //TODO filtrar po semana Hacer alguna logica para filtrar por semana (el sistema se activa los viernes)
 
-    // 5. Convertir a un array simple con los datos que nos interesan
+    // 5. Filtramos por semana, para que el sistema se active los viernes
+    const sevenDays = Date.now() - (7 * 86400 * 1000);
+
+    // 6. Convertimos a un array simple los datos y filtramos por fecha
     const result = messages.map(msg => ({
 
         author: msg.author.username,
         content: msg.content,
         date: msg.createdAt,
         reactions: msg.reactions.cache.size
-        
-    }));
 
-    // 6. Desconectar el bot
+    })).filter(msg => msg.date.getTime() > sevenDays); //.getTime() para cambiar a milisegundos la variable
+
+    // 7. Desconectar el bot
     client.destroy();
 
     return result;
