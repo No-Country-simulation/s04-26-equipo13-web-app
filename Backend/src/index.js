@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const { collectMessages } = require("./collector/discord-collector");
 const { generateContent } = require("./processor/content-generator");
+const cron = require("node-cron");
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const CHANNEL_ID = "1498678945812447389";
@@ -26,6 +27,14 @@ async function main() {
     console.log(drafts.twitter);
 }
 
-main().catch(error => {
-    console.error("Error:", error);
+cron.schedule("0 18 * * 5", async() => {
+
+    try{
+
+        await main();
+        
+    }catch(error){
+
+        console.error("Error en el cron: ", error);
+    }
 });
