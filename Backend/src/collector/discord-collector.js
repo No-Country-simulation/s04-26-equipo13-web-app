@@ -13,6 +13,7 @@ const client = new Client({
 });
 
 async function collectMessages(token, channelId) {
+    
     // 1. Conectar el bot a Discord
     await client.login(token);
 
@@ -31,6 +32,10 @@ async function collectMessages(token, channelId) {
     const messages = await channel.messages.fetch({ limit: 100 });
 
     // 5. Filtramos por semana, para que el sistema se active los viernes
+    /*
+        Creamos la variable "sevenDays" y la igualamos a Date.now() y le restamos el 7 (dias de la semana) 
+        a esto le multiplicamos el valor de un dia en segundos y lo pasamos a milisegundos a todo
+    */
     const sevenDays = Date.now() - (7 * 86400 * 1000);
 
     // 6. Convertimos a un array simple los datos y filtramos por fecha
