@@ -1,16 +1,32 @@
 require("dotenv").config();
 
-const { collectMessages } = require("./collector/discord-collector");
+const { collectMessages, getAvailableChannels } = require("./collector/discord-collector");
 const { generateContent } = require("./processor/content-generator");
 const cron = require("node-cron");
 
-const TOKEN = process.env.DISCORD_TOKEN;
+const TOKEN = process.env.DISCORD_TOKEN; //el bot
 const CHANNEL_ID = "1498678945812447389";
+const GUILD_ID = process.env.DISCORD_GUILD_ID; //id del server
 const GEMINI_KEY = process.env.GEMINI_API;
 
 async function main() {
+
+    // Paso 0: Ver canales disponibles (NUEVO)
+    console.log("Buscando canales disponibles...");
+    try {
+        const availableChannels = await getAvailableChannels(TOKEN, GUILD_ID);
+        console.log("Canales encontrados:");
+        // Mostramos la lista linda en la consola
+        availableChannels.forEach(ch => {
+            console.log(`- ${ch.name} (ID: ${ch.id}) [Categoría: ${ch.category}]`);
+        });
+    } catch (error) {
+        console.error("Error al traer los canales:", error);
+    }
+
     // Paso 1: Recolectar mensajes de Discord
     console.log("Recolectando mensajes de Discord...");
+
     const messages = await collectMessages(TOKEN, CHANNEL_ID);
     console.log(`Se recolectaron ${messages.length} mensajes`);
 
@@ -27,15 +43,17 @@ async function main() {
     console.log(drafts.twitter);
 }
 // Paso 4: utilizamos cron para contar los dias de la semana y verificamos q sea correcto, para enviar el informe semanal
-cron.schedule("0 18 * * 5", async() => { 
+cron.schedule("0 18 * * 5", async () => {
     // 0-> minutos, 18-> hora, *-> valores nulos, 5-> dia de la semana en este caso viernes (0 = domingo, ..., 5 = viernes)
-    
-    try{
+
+    try {
 
         await main();
-        
-    }catch(error){
+
+    } catch (error) {
 
         console.error("Error en el cron: ", error);
     }
 });
+
+main();
