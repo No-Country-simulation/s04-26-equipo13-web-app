@@ -15,13 +15,13 @@ import { RefreshCw } from "lucide-react";
 import { ActivityCard } from "./ActivityCard";
 import ActivityCardEmpty from "./ActivityCardEmpty";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CommunityFeedService } from "@/services/communityfeed.service";
+import { CommunityFeedService, TriggerCollectionService } from "@/services/communityfeed.service";
 import { GenerationDraftNew } from "@/services/contentdraft.service";
 import { toast } from "sonner";
 import { ActivityCardSkeleton } from "@/components/shared/skeletons/ActivityCardSkeleton";
 
 export function CommunityFeed() {
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["communityfeed"],
     queryFn: CommunityFeedService,
   });
@@ -29,25 +29,49 @@ export function CommunityFeed() {
 
   const query = useQueryClient();
 
-  const { mutate, isPending } = useMutation({
+  // Mutation to generate drafts
+  const { mutate: generateDrafts, isPending: isGenerating } = useMutation({
     mutationFn: GenerationDraftNew,
     onError: (error) => {
       toast.error(error.message);
     },
     onSuccess: (data) => {
       query.invalidateQueries({
-        queryKey: ["communityfeed"],
-      });
-      query.invalidateQueries({
         queryKey: ["contentdraft"],
       });
-      toast.success(data?.message);
+      toast.success(data?.message || "Drafts generated successfully");
     },
   });
 
-  const isRefreshing = isPending || isFetching;
+  // Mutation to collect messages
+  const { mutate: collectMessages, isPending: isCollecting } = useMutation({
+    mutationFn: TriggerCollectionService,
+    onError: (error) => {
+      toast.error(error.message);
+    },
+    onSuccess: (data) => {
+      // Refetch community feed after collection
+      refetch();
+      toast.success(`${data.messageCount} messages collected successfully`);
+    },
+  });
 
-  const handleAIGenerate = () => mutate();
+  // Handle refresh: collect new messages from Discord
+  const handleRefresh = () => {
+    collectMessages();
+  };
+
+  // Handle generate: create AI drafts with collected messages
+  const handleAIGenerate = () => {
+    if (activities.length === 0) {
+      toast.error("No messages available. Click Refresh to collect messages first");
+      return;
+    }
+    generateDrafts();
+  };
+
+  const isRefreshing = isCollecting || isFetching;
+  const isLoading_ = isGenerating || isCollecting;
 
   return (
     <div className="p-1.78 flex flex-col gap-6">
@@ -64,9 +88,10 @@ export function CommunityFeed() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleAIGenerate}
+            onClick={handleRefresh}
             disabled={isRefreshing}
             className="rounded-full hover:bg-primary/10 text-primary"
+            title="Collect messages from Discord"
           >
             <RefreshCw
               className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`}
@@ -92,27 +117,26 @@ export function CommunityFeed() {
             )}
           </CardContent>
         </ScrollArea>
-           <CardFooter className=" bg-card flex border-none items-center justify-end pt-0 px-8 pb-8">
-        {activities.length > 0 &&
-        (isPending ? (
-          <Button
-            disabled
-            onClick={handleAIGenerate}
-            className="w-full py-8 rounded-full font-bold uppercase tracking-[0.2em] text-[10px] shadow-xl hover:shadow-2xl transition-all gap-3"
-          >
-            <Logo className="animate-spin" />
-            Generating draft
-          </Button>
-        ) : (
-          <Button
-            onClick={handleAIGenerate}
-            className="w-full rounded-full py-8  font-bold uppercase tracking-[0.2em] text-[10px] shadow-xl hover:shadow-2xl transition-all gap-3"
-          >
-            <Logo className="w-6 h-6" />
-            Generate AI Drafts
-          </Button>
-        ))}
-      </CardFooter>
+        <CardFooter className=" bg-card flex border-none items-center justify-end pt-0 px-8 pb-8">
+          {activities.length > 0 &&
+          (isLoading_ ? (
+            <Button
+              disabled
+              className="w-full py-8 rounded-full font-bold uppercase tracking-[0.2em] text-[10px] shadow-xl hover:shadow-2xl transition-all gap-3"
+            >
+              <Logo className="animate-spin" />
+              {isCollecting ? "Collecting..." : "Generating..."}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleAIGenerate}
+              className="w-full rounded-full py-8  font-bold uppercase tracking-[0.2em] text-[10px] shadow-xl hover:shadow-2xl transition-all gap-3"
+            >
+              <Logo className="w-6 h-6" />
+              Generate AI Drafts
+            </Button>
+          ))}
+        </CardFooter>
       </Card>
     </div>
   );
