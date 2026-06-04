@@ -16,6 +16,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { forgotPasswordService } from "@/services/forgot.service";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function ForgotPasswordForm() {
   const {
@@ -62,11 +63,20 @@ export default function ForgotPasswordForm() {
                 className="rounded-full px-8 bg-secondary/50 border-none h-14"
                 placeholder="name@company.com"
               />
-              {fieldState.error && (
-                <FieldError className="text-destructive text-xs mt-1">
-                  {fieldState.error.message}
-                </FieldError>
-              )}
+              <AnimatePresence>
+                {fieldState.error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <FieldError className="text-destructive text-xs mt-1">
+                      {fieldState.error.message}
+                    </FieldError>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </Field>
           )}
         />
